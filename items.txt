@@ -1,0 +1,52 @@
+Different types of items: Action, Modifiers, Bomb, Skills, passives
+z: bullets. can be improved using modifiers. An indefinite amount of modifiers can be added.
+x and c: actions. can only have two equiped max. x action is permanent and is pretty good (from skill tree), c action can be replaced
+v: bomb. massive damage/special effect attack. can be upgraded with modifiers, but are pretty rare.
+passive: effect that remains constant. can only have one at a time. different from skills
+skills: obtained from skill tree. skills are small upgradeable perks that are achieved through level up. enough perks will unlock special actions or bullet/bomb modifiers.
+shields:
+
+Modifier ideas: 
+Penetrate: Bullets pass through enemies
+Scatter: Bullets separate into four smaller bullets on enemy contact
+Ponder: Greater damage, slower speed.
+Hasten: Faster speed, lower damage.
+Link: Damaged enemies have a chance to "chain" damage to nearby enemies
+Auxiliary: Attacks have a small chance to shoot a small rocket that homes in on nearby enemies
+Recur: Bullets have a boomerang-like effect.
+Incision: Damaged enemies take damage over time.
+Mire: Bullets have a chance to slow enemies.
+Dubious: Less accuracy, greater fire rate.
+
+Actions:
+Dash: run forward quickly while invincible for a short period of time.
+Vital: Provides an immediate health boost. Large cooldown.
+Dazzle: Enemies within a radius are slowed.
+Rend: Heavily damage all enemies in front of you. Large cooldown.
+Bargain: Take a small amount of damage and gain a massive damage boost for a few seconds.
+Shift: Nearby Enemy is stunned for several seconds.
+Shock: Electricity arcs between nearby enemies, making them take more damage.
+Encase: Slow movement speed, slow bullets, greater damage.
+Deplete: Gain max fire speed for a few seconds before being unable to fire for a few seconds
+Sentence: Next hit enemy takes increased damage from everything
+Lifeline: You can't die for several seconds. Massive cooldown.
+Guardian: Summons three orbs that surround you that can block bullets. Large cooldown.
+Astral: Shoot a large orb out that fires bullets in an area.
+
+
+Passive:
+Overshield: Generates a regenerating shield that absorbs damage. 
+Spike Mantle: Receiving damage inflicts damage on attacking enemies.
+Counter: Bullets have a chance to do no damage.
+Critical: The more damage you've taken, the more damage you do
+Thick Hide: You can't take more than half of your Max HP as damage.
+
+Bomb:
+Generic: Standard. Kills all enemies within a short range. 
+Reverse: All incoming bullets within a radius of the player have their direction reversed.
+Salvo: Player shoots dozens of slow rockets in random directions
+Focus: Shoots a massive laser in a direction.
+White Noise: All enemies are stunned and take damage over time.
+Freeze: All enemies stop moving for several seconds.
+Propulsion: Player can fly for several seconds, leaving a trail of explosions.
+Factorial: Randomly deal 1! to 6! damage to all enemies

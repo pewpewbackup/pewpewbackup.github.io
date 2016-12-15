@@ -1,0 +1,998 @@
+<!--Probably 96% of the code here is mine.
+http://www.html5canvastutorials.com/advanced/html5-canvas-mouse-coordinates/ for canvas mouse coordinates
+Made by James Park-->
+<!DOCTYPE html>
+<head>
+<title>PewPew Unstable</title>
+</head>
+<body>
+<h1>Pewpew Beta (Unstable)</h1>
+<canvas id="c" style="border: 1px solid black">Can you get something that supports this canvas</canvas>
+<p>Game may be broken or unplayable</p>
+<b>Make suggestions for backgrounds plz</b>
+<script>
+var c = document.getElementById("c");
+var ctx = c.getContext("2d");
+//recommended 3:5, height:width
+c.height = 450;
+c.width = 750;
+
+/** Below is code for the player */
+function Player(spd1, size1, name1, hp1, fr1)
+{
+	this.x = c.width / 2;
+	this.y = c.height / 2;
+	
+	this.scrollX = 0;
+	this.scrollY = 0;
+	
+	this.constX = 0;
+	this.yV = 5;
+	this.jump = 0;
+	this.jumpMax = 20;
+	this.air = false;
+	this.spd = spd1;
+	
+	this.size = size1;
+	this.name = name1;
+	
+	this.maxHP = hp1;
+	this.HP = hp1;
+	
+	this.state = "normal";
+	this.icounter = 0;
+	
+	this.weapons = [generateWeapon(1, 0), generateWeapon(1, 1), generateWeapon(2, 2), null];
+	
+	this.ability1 = "dash";
+	this.abActive = false;
+	this.ab1MaxCooldown = 70; 
+	this.ab1Cooldown = 0;
+	
+	this.currentWep = 0;
+	this.swapTime = 0;
+	
+	this.dir = "left";
+	console.log("Player " + this.name + " created with x: " + this.x + ", y: " + this.y + ", speed: " + this.spd + ", size: " + this.size + ", HP: " + this.maxHP);
+}
+
+function updatePlayer(p, g)
+{ 
+  if (Key.isDown(Key.Z))
+	{
+    shootBullet(p, g);
+	}
+	if (Key.isDown(Key.X))
+	{
+    useAbility1(p);
+	}
+	if (Key.isDown(Key.A))
+	{
+	  switchWeapon(p);
+	}
+	
+  var arr = predictWallCollision(p, g.wallTiles);
+  var x = 0;
+  var y = 0;
+  touchingBlock(p, arr[4]);
+  if (Key.isDown(Key.LEFT))
+  {
+     p.dir = "left";
+	    x += p.spd - arr[0];
+  }
+	if (Key.isDown(Key.RIGHT))
+	{
+	    p.dir = "right";
+			x -= p.spd - arr[1];
+	}
+	if (atDoor(p, g) && Key.isDown(Key.DOWN))
+	{
+	    changeLevel(p, g);
+	    console.log("at door");
+	}
+	
+	if (arr[3] != 0 && p.air)
+	{
+	  p.air = false;
+	}
+	if (Key.isDown(Key.UP) && p.jump == 0 && !p.air)
+	{
+	  p.jump = 25;
+	  p.air = true;
+	}
+	
+	if (p.jump > 0)
+	{
+	  if (arr[2] == 0 && p.air)
+	  {
+	    if (p.jump < 7)
+	      y += 5 - arr[2];
+	    else
+	      y += 5 - arr[2];  //-1 * (Math.pow(p.jump - 10, 2) / 10) + 10;
+	  }
+	  p.jump--;
+	}
+	else if (arr[3] == 0 && p.jump == 0)
+	{
+	  p.yV = 5;
+	  y -= p.yV - arr[3];
+	}
+	
+	if (arr[2] != 0)
+	{
+	  p.jump = 0; 
+	}
+	
+	
+	if (p.dir == "left")
+  {
+    x += p.constX;
+    if (p.abActive && !Key.isDown(Key.LEFT))
+      x += p.spd - arr[0];
+  }
+  else if (p.dir == "right")
+  {
+    x -= p.constX;
+    if (p.abActive && !Key.isDown(Key.RIGHT))
+      x -= p.spd - arr[1];
+  }
+  
+  touchingEnemy(g.AIList, p);
+  updateAbilities(p, ctx); 
+  updateLevel(g, y, x, p);
+  if (p.state == "invin")
+  {
+    if (p.icounter % 3 == 0)
+      drawSquare(ctx, p, "#FFFF13");
+    p.icounter--;
+    if (p.icounter == 0)
+    {
+      p.state = "normal"; 
+    }
+  }
+  else
+  {
+	  drawSquare(ctx, p, "#FFFF00");
+  }
+  if (p.HP <= 0)
+    g.loop = false;
+}
+
+
+
+//Subtracts from player's HP variable.
+function playerDamage(p, num, dType) //dType is the type of damage received
+{
+  if (p.state != "invin")
+  {
+    p.HP -= num;
+    if (dType != "fire")
+    {
+      p.state = "invin";
+      p.icounter = 15;
+    }
+  }
+}
+
+//Currently in progress
+function touchingBlock(p, type) 
+{
+  if (type == 1)
+    playerDamage(p, 1, "fire");
+}
+
+function bulletHit(p, g)
+{
+  for (var i = 0; i < g.eBullets.length; i++)
+  {
+    if (detectCollision(p, g.eBullets[i]))
+      playerDamage(p, 5, "bullet")
+  }
+}
+
+//Detects a collision between two axis-aligned squares (objects) and returns true.
+//Assumes that both objects have (x, y) coordinates and a size (side length).
+//This is NOT for tile collision detection.
+function detectCollision2(s1, s2)
+{
+	if (s1.x < s2.x + s2.size && s1.x + s1.size > s2.x && s1.y < s2.y + s2.size && s1.y + s1.size > s2.y)
+	{
+		return true;	
+	}
+	return false;
+}
+
+//same as above, but with three variables that represent an object (x, y ,size) and another object
+function detectCollision(x, y, size, s2)
+{
+	if (x < s2.x + s2.size && x + size > s2.x && y < s2.y + s2.size && y + size > s2.y)
+	{
+		return true;	
+	}
+	return false;
+}
+
+//Predicts wall collision based on player's speed, and returns an array with directional offsets to prevent a player from clipping into the wall
+//array elements are [left, right, up, down]
+function predictWallCollision(s, t)
+{
+  var arr = [0, 0, 0, 0, 0];
+  var left = s.x - s.spd - s.constX;
+  var right = s.x + s.spd + s.constX;
+  var up = s.y - s.yV;
+  var down = s.y + s.yV;
+  for (var i = 0; i < t.length; i++)
+  {
+      if (detectCollision(left, s.y, s.size, t[i]))
+      {
+        arr[0] = t[i].x + t[i].size - left; //LEFT
+      }
+      if (detectCollision(right, s.y, s.size, t[i]))
+      {
+        arr[1] = right + s.size - t[i].x; //RIGHT
+      }
+      if (detectCollision(s.x, up, s.size, t[i]))
+      {
+        arr[2] = t[i].y + t[i].size - up; //UP
+      }
+      if (detectCollision(s.x, down, s.size, t[i]))
+      {
+        arr[3] = down + s.size - t[i].y; //DOWN
+      }
+  }
+  return arr;
+}
+
+var P1 = new Player(7, 15, "p1", 60, 2); //The player
+
+
+//This was taken from somewhere else, I'll find the source when I can
+//Ensures continuous event triggering that isn't janky or abrupt
+//To add more possible buttons, just put in a variable with the appropriate keycode
+var Key = { _pressed: {}, LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, W: 87, A: 65, S: 83, D: 68, Z: 90, X: 88, C: 67,
+	isDown: function(keyCode)
+	{
+		return this._pressed[keyCode];
+	},
+	onKeydown: function(event)
+	{
+		this._pressed[event.keyCode] = true;
+	},
+	onKeyup: function(event)
+	{
+		delete this._pressed[event.keyCode];
+	}
+}
+
+function drawSquare(ctx, o, hex)
+{
+	ctx.fillStyle = hex;
+	ctx.fillRect(o.x, o.y, o.size, o.size);
+}
+
+//Represents the tiles that the levels are made of
+function Tile(x, y, size, type)
+{
+  this.x = x;
+  this.y = y;
+  this.size = size;
+  this.type = type;
+  this.num;
+  this.dir;
+  this.hp;
+}
+
+var tiles = new Array();
+var TILE_SIZE = 30;
+
+//This takes in a string and converts into an array of Tile Objects
+//Should remove all enemies and bullets and shit
+function loadLevel(lvl, p, g)
+{
+  g.levelNumber = lvl;
+  var str = g.levels[g.levelNumber].string;
+  g.tiles.splice(0, g.tiles.length);
+  g.pBullets.splice(0, g.pBullets.length);
+  g.wallTiles.splice(0, g.wallTiles.length);
+  g.doorTiles.splice(0, g.doorTiles.length);
+  g.hiveTiles.splice(0, g.hiveTiles.length);
+  g.AIList.splice(0, g.AIList.length);
+  
+  p.scrollX = 0;
+  p.scrollY = 0;
+  var x = 0;
+  var y = 0;
+  for (var i = 0; i < str.length; i++)
+  {
+     if (i % g.levels[g.levelNumber].width == 0 && i != 0)
+     {
+       x = 0;
+       y += TILE_SIZE;
+     }
+     readTile(x, y, str.charAt(i), g);
+     //tiles[i] = new Tile(x, y, TILE_SIZE, str.charAt(i));
+     g.tiles.push(new Tile(x, y, TILE_SIZE, str.charAt(i)));
+     x += TILE_SIZE;
+  }
+  setProps(g);
+  updateLevel(g, -1 * g.levels[g.levelNumber].startY, -1 * g.levels[g.levelNumber].startX, p);
+  console.log("Level loaded!");
+}
+
+function setProps(g)
+{
+  for (var i = 0; i < g.doorTiles.length; i++)
+  {
+    g.doorTiles[i].num = i;
+  }
+  for (var i = 0; i < g.signTiles.length; i++)
+  {
+    g.signTiles[i].num = i;
+  }
+}
+
+
+
+function changeLevel(p, g)
+{
+  for (var i = 0; i < g.doorTiles.length; i++)
+  {
+    if (detectCollision2(p, g.doorTiles[i]))
+    {
+      setSpawnCoords(g.doorTiles[i], g, p);
+    }
+  }
+
+}
+
+function setSpawnCoords(door, g, p)
+{
+  if (g.levelNumber == 0)
+  {
+    if (door.num == 0)
+    {
+      g.levels[1].startX = -300;
+      g.levels[1].startY = -120;
+      loadLevel(1, p, g); 
+    }
+  }
+  else if (g.levelNumber == 1)
+  {
+    if (door.num == 0)
+    {
+      g.levels[0].startX = 1350;
+      g.levels[0].startY = 330;
+      loadLevel(0, p, g);   
+    }
+    else if (door.num == 1)
+    {
+      g.levels[3].startX = 1800;
+      g.levels[3].startY = -160;
+      loadLevel(3, p, g);   
+    }
+    else if (door.num == 2)
+    {
+      g.levels[2].startX = -300;
+      g.levels[2].startY = -120;
+      loadLevel(2, p, g);   
+    }
+  }
+  else if (g.levelNumber == 2)
+  {
+    if (door.num == 0)
+    {
+      g.levels[1].startX = 2470;
+      g.levels[1].startY = 360;
+      loadLevel(1, p, g);   
+    }
+  }
+  else if (g.levelNumber == 3)
+  {
+    if (door.num == 0)
+    {
+      g.levels[1].startX = -300;
+      g.levels[1].startY = 340;
+      loadLevel(1, p, g);   
+    }
+  }
+}
+
+//sets a tile to a specific color
+function drawTile(ctx, t)
+{
+  if (t.type == "I")
+    ctx.fillStyle = "#0000FF";
+  else if (t.type == "H")
+    ctx.fillStyle = "#E83328";
+  else if (t.type == "-")
+    ctx.fillStyle = "#FFFFFF";
+  else if (t.type == "@")
+    ctx.fillStyle = "#4059FF";
+  else if (t.type == "1")
+    ctx.fillStyle = "#1CFF60";
+  else if (t.type == "2")
+    ctx.fillStyle = "#1AE81D";
+  else if (t.type == "3")
+    ctx.fillStyle = "#70FF29";
+  else if (t.type == "4")
+    ctx.fillStyle = "#A6E81A";
+  else if (t.type == "5")
+    ctx.fillStyle = "#FFFD1C";
+  else if (t.type == "0")
+    ctx.fillStyle = "#000000";
+  else if (t.type == "B")
+    ctx.fillStyle = "#EEFF33";
+  else if (t.type == "b")
+    ctx.fillStyle = "#EEFF33";
+  else if (t.type == "=")
+    ctx.fillStyle = "#666666";
+  else if (t.type == "[")
+    ctx.fillStyle = "#777777";
+  else if (t.type == "]")
+    ctx.fillStyle = "#999999";
+  else if (t.type == "J")
+    ctx.fillStyle = "#0099AA";
+  
+  ctx.fillRect(t.x, t.y, t.size, t.size);
+}
+
+function drawLevel(ctx, tiles)
+{
+  for (var i = 0; i < tiles.length; i++)
+  {
+    if (tiles[i].x < c.width && tiles[i].x > -1 * TILE_SIZE && tiles[i].y < c.height && tiles[i].y > -1 * TILE_SIZE)
+    drawTile(ctx, tiles[i]);
+  }
+}
+
+//Updates the entire level including tiles, bullets, items, etc. The player and enemies are updated separately.
+function updateLevel(g, dY, dX, p)
+{
+  p.scrollX += dX;
+  p.scrollY += dY;
+  for (var i = 0; i < g.tiles.length; i++)
+  {
+      g.tiles[i].x += dX;
+      g.tiles[i].y += dY;
+      if (i < g.wallTiles.length)
+      {
+        g.wallTiles[i].x += dX;
+        g.wallTiles[i].y += dY;
+      }
+      if (i < g.doorTiles.length)
+      {
+        g.doorTiles[i].x += dX;
+        g.doorTiles[i].y += dY;
+      }
+      if (i < g.hiveTiles.length)
+      {
+        g.hiveTiles[i].x += dX;
+        g.hiveTiles[i].y += dY;
+      }
+  }
+  updateBullets(g.pBullets, p, dY, dX);
+  updateHive(g)
+  //Update AI positions
+  for (var i = 0; i < g.AIList.length; i++)
+  {
+    g.AIList[i].startX += dX;
+    g.AIList[i].startY += dY;
+  }
+  enemyDamage(g);
+}
+
+function atDoor(p, g)
+{
+  for (var i = 0; i < g.doorTiles.length; i++)
+  {
+    if (detectCollision2(p, g.doorTiles[i]))
+      return true;
+  }
+  return false;
+}
+
+function atSign(p, g)
+{
+  for (var i = 0; i < g.doorTiles.length; i++)
+  {
+    if (detectCollision2(p, g.signTiles[i]))
+      return true;
+  }
+  return false;
+}
+
+function updateHive(g)
+{
+  for (var i = 0; i < g.hiveTiles.length; i++)
+  {
+    var r = Math.floor(Math.random() * 100);
+    
+    for (var j = 0; j < g.pBullets.length; j++)
+    {
+      if (detectCollision2(g.pBullets[j], g.hiveTiles[i]))
+        g.hiveTiles[i].hp -= g.pBullets[j].damage; 
+    }
+    
+    if (r < 2 && g.hiveTiles[i].hp > 0)
+    {
+      var spd = g.hiveTiles[i].dir * Math.floor(Math.random() * 4 + 2);
+      g.AIList.push(new AI(g.hiveTiles[i].x, g.hiveTiles[i].y, 15, "#FF0000",
+      function(t)
+      {
+         return spd * t;
+      },
+      function(t)
+      {
+        return 50 * Math.sin(t/15);
+      }));
+    }
+  }
+}
+
+function readTile(x, y, type, g)
+{
+  if (type == "I")
+  {
+    g.wallTiles.push(new Tile(x, y, TILE_SIZE, type));
+  }
+  else if (type == "H")
+  {
+    g.wallTiles.push(new Tile(x, y, TILE_SIZE, type));
+    g.fireTiles.push(new Tile(x, y, TILE_SIZE, type));
+  }
+  else if (type == "0")
+  {
+    g.doorTiles.push(new Tile (x, y, TILE_SIZE, type));  
+  }
+  else if (type == "B")
+  {
+    g.hiveTiles.push(new Tile (x, y, TILE_SIZE, type));
+    g.hiveTiles[g.hiveTiles.length - 1].dir = 1;
+    g.hiveTiles[g.hiveTiles.length - 1].hp = 20;
+  }
+  else if (type == "b")
+  {
+    g.hiveTiles.push(new Tile (x, y, TILE_SIZE, type)); 
+    g.hiveTiles[g.hiveTiles.length - 1].dir = -1;
+    g.hiveTiles[g.hiveTiles.length - 1].hp = 20;
+  }
+  else if (type == "S")
+  {
+    g.signTiles.push(new Tile(x, y, TILE_SIZE, type));
+  }
+}
+
+
+
+function Weapon(name, fr, dmg, acc, size, spd, num, clr, rng, tier)
+{
+  this.name = name;
+  this.maxFireRate = fr;
+  this.fireRate = fr;
+  this.damage = dmg;
+  this.accuracy = acc;
+  this.bulletSize = size;
+  this.bulletSpd = spd;
+  this.bulletNumber = num;
+  this.color = clr;
+  this.range = rng;
+  this.tier = tier; //how good a weapon is
+}
+
+//Creates a weapon. Types of weapons are included in weaponTest.txt or something
+function generateWeapon(tier, type)
+{
+  var wep;
+  if (type == 0)
+    wep = new Weapon("Pistol", 12 - tier, 5 + tier, 1, 10 + (tier - 1), 12, 1, "#EE3300", 15, tier);
+  else if (type == 1)
+    wep = new Weapon("Automatic", 6 - tier, 3, 3, 9, 15 + (tier * 2), 1, "#EE3300", 20, tier);
+  else if (type == 2)
+    wep = new Weapon("Scatter", 22 - (tier), 3, 3, 9, 12, 4 + (tier), "#EE3300", 20, tier);
+  //wep.name = addPrefix(wep);
+  return wep;
+  console.log("New " + wep.name + " created");
+}
+
+function addPrefix(wep)
+{
+  var str = "";
+  if (wep.tier == 0)
+    str = "Cringeworthy ";
+  else if (wep.tier == 1)
+    str = "Mediocre ";
+  else if (wep.tier == 2)
+    str = "Riveting ";
+  else if (wep.tier == 3)
+    str = "Exemplar ";
+  return str + wep.name;
+}
+
+function switchWeapon(p)
+{
+  if (p.swapTime == 0)
+  {
+    p.currentWep++;
+    while (p.weapons[p.currentWep] === null)
+    {
+      p.currentWep++;
+      if (p.currentWep == 4)
+        p.currentWep = 0;
+    }
+    p.swapTime = 7;
+    console.log("Weapon switched to " + p.weapons[p.currentWep].name);
+  }
+  else
+    p.swapTime--;
+  
+}
+
+//shoots a bullet (z button)
+function shootBullet(p, g)
+{
+  if (p.weapons[p.currentWep].fireRate == 0)
+  {
+    var a = new Array(p.weapons[p.currentWep].bulletNumber);
+    var d = new Array(p.weapons[p.currentWep].bulletNumber);
+    if (p.dir == "left")
+    {
+      for (var i = 0; i < a.length; i++)
+      {
+        if (p.weapons[p.currentWep].name == "Pistol")
+        {
+          a[i] = Math.PI;
+          d[i] = 1; 
+        }
+        else if (p.weapons[p.currentWep].name == "Automatic")
+        {
+          a[i] = Math.PI;
+          d[i] = 1;  
+        }
+        else if (p.weapons[p.currentWep].name == "Scatter")
+        {
+          var t = Math.floor(Math.random() * 2);
+          if (t == 0)
+          {
+            a[i] = Math.random() * Math.PI / 4;
+            d[i] = -1;
+          }
+          else
+          {
+            a[i] = Math.PI - Math.random() * Math.PI / 4;
+            d[i] = 1;
+          }  
+        }
+      }
+    }
+    if (p.dir == "right")
+    {
+      for (var i = 0; i < a.length; i++)
+      {
+        if (p.weapons[p.currentWep].name == "Pistol")
+        {
+          a[i] = 0;
+          d[i] = 1; 
+        }
+        else if (p.weapons[p.currentWep].name == "Automatic")
+        {
+          a[i] = 0;
+          d[i] = 1;  
+        }
+        else if (p.weapons[p.currentWep].name == "Scatter")
+        {
+          var t = Math.floor(Math.random() * 2);
+          if (t == 0)
+          {
+            a[i] = Math.random() * Math.PI / 4;
+            d[i] = 1;
+          }
+          else
+          {
+            a[i] = Math.PI - Math.random() * Math.PI / 4;
+            d[i] = -1;
+          }  
+        }
+      }
+    }
+    for (var i = 0; i < p.weapons[p.currentWep].bulletNumber; i ++)
+    {
+      g.pBullets.push(new PlayerBullet(p.x + p.size / 2, p.y + p.size / 3, p.weapons[p.currentWep].bulletSize, p.weapons[p.currentWep].bulletSpd, a[i], d[i], p.weapons[p.currentWep].range, p.weapons[p.currentWep].damage));
+    }
+    p.weapons[p.currentWep].fireRate = p.weapons[p.currentWep].maxFireRate;
+  }
+}
+
+//Updates the bullets
+function updateBullets(bullets, p, dY, dX)
+{
+  if (p.weapons[p.currentWep].fireRate > 0)
+     p.weapons[p.currentWep].fireRate--;
+  for (var i = 0; i < bullets.length; i++)
+  {
+    if (bullets[i].range > 0)
+    {
+      bullets[i].x += Math.cos(bullets[i].angle) * bullets[i].spd * bullets[i].dir + (dX);
+		  bullets[i].y += (1 - Math.pow(Math.cos(bullets[i].angle), 2)) * bullets[i].spd * bullets[i].dir + (dY);  
+		  bullets[i].range--;
+		  drawSquare(ctx, bullets[i], bullets[i].color);
+    }
+    else
+      bullets.splice(i, 1);
+  }
+}
+
+
+function PlayerBullet(x1, y1, size1, spd1, angle1, dir1, range1, dmg)
+{
+	this.x = x1;
+	this.y = y1;
+	this.dir = dir1;
+	this.size = size1;
+	this.spd = spd1;
+	this.bounce = false; //not implemented
+	this.angle = angle1;
+	this.tag = "friendly";
+	this.color = "#FF00FF";
+	this.maxRange = range1;
+	this.range = range1;
+	this.damage = dmg;
+}
+
+function EnemyBullet(x1, y1, size1, spd1, angle1)
+{
+  this.x = x1;
+  this.y = y1;
+  this.size = size1;
+  this.spd = spd1;
+  this.angle = angle1;
+}
+
+
+
+//activates ability 1 (x button) if possible
+function useAbility1(p)
+{
+  if (p.ability1 == "dash" && p.ab1Cooldown == 0)
+  {
+    p.abActive = true;
+    p.state = "invin";
+    p.icounter = 8;
+    p.ab1Cooldown = p.ab1MaxCooldown;
+    p.constX = 20;
+  }
+}
+
+//Updates the current state of abilities, such as cooldown
+function updateAbilities(p)
+{
+  if (p.ability1 == "dash" &&p.ab1Cooldown != 0)
+  {
+    if (p.icounter == 0)
+    {
+      p.constX = 0;
+      p.abActive = false;  
+    }
+  }
+  if (p.ab1Cooldown > 0)
+    p.ab1Cooldown--;
+}
+
+var AB1_WIDTH = c.width / 14;
+var AB1_HEIGHT = AB1_WIDTH;
+
+function drawAbility1(p, ctx)
+{
+  var timer = (p.ab1MaxCooldown - p.ab1Cooldown) / p.ab1MaxCooldown;
+  if (timer < 0)
+    timer = 0;
+  ctx.fillStyle = "#111111";
+  ctx.fillRect(10, c.height - 10 - AB1_HEIGHT, AB1_WIDTH, AB1_HEIGHT);
+  ctx.fillStyle = "#44FF00";
+  ctx.fillRect(10, c.height - 10 - AB1_HEIGHT, AB1_WIDTH * timer, AB1_HEIGHT);
+  ctx.fillStyle = "#FFFFFF";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(10, c.height - 10 - AB1_HEIGHT, AB1_WIDTH, AB1_HEIGHT);
+  ctx.font="20px Arial";
+  ctx.strokeText("X", 4 + AB1_WIDTH / 2, c.height - 4 - AB1_HEIGHT / 2);
+}
+
+function drawWeapon(p, ctx)
+{
+
+}
+
+var BAR_WIDTH = c.width / 4;
+var BAR_HEIGHT = c.height / 18;
+
+function drawHealth(p, ctx)
+{
+  var hpbar = p.HP / p.maxHP;
+  if (hpbar < 0)
+    hpbar = 0;
+  ctx.fillStyle = "#111111";
+  ctx.fillRect(10, 10, BAR_WIDTH, BAR_HEIGHT);
+  ctx.fillStyle = "#44FF00";
+  ctx.fillRect(10, 10, BAR_WIDTH * hpbar, BAR_HEIGHT);
+  ctx.fillStyle = "#FFFFFF";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(10, 10, BAR_WIDTH, BAR_HEIGHT);
+}
+
+function drawGUI(p, ctx)
+{
+  drawHealth(p, ctx);
+  drawAbility1(p, ctx);
+  drawWeapon(p, ctx);
+}
+
+function Level(str, w, h, mapNum, x, y)
+{
+  this.string = str;
+  this.width = w;
+  this.height = h;
+  this.num = mapNum;
+  this.startX = x;
+  this.startY = y;
+  this.background;
+}
+
+function drawBackground()
+{
+  
+}
+function addLevels(g)
+{
+  g.levels.push(new Level("IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII------------------------------------------------------------------------------------------------II------------------------------------------------------------------------------------------------II------------------------------------------------------------------------------------------------II------------------------------------------------------------------------------------------------II------------------------------------------------------------------------------------------------II------------------------------------------------------------------------------------------------II------------------------------------------------------------------------------------------------II------------------------------------------------------------------------------------------------II----------II--II---II-------------------II------------IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII----------II--II---II--------------IIIIIII------------------------------------------------------II---------IIIIIII---II-------------------IIIIIIIIIII------------------------------------I--------II---------------------------II-----------II---------------------------------------------II-------III-------III----------------II-----------II------IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII---IIIIIIII------------------------BII------IIIIIII111111111111111111111111111111111111111111111111111111II1111111111111111111111111111111111111111II------------------------------------------------------IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII11111111IIHHHHHHHHIIIIIIIIIIIIIIHHHII---IIIIIIIHHHIIIIIIIIHIIIIIII-----------------II---------------------II================I==-----------------------------------II-----------------II---------------------II===============0I====---------------------------------II-----------------IIIIIIIIIIIIIIIIIIIIIIIII======IIIIIIIIIIIIIIIIIIIIIIHHHHHHIHHIIHHIHHHII-----HHII--------------------------------------IIIII==IIIIIIIIIIIIIIIIIIII----------------------HHH------HI-----------------------------------------------------------------------------------------HHH----HI------------------------------------------------------------IIIIIIIIII-----------------II------HHI---------------------------------IIIIIHHHIIIIHHIIHIHIIIIIIHH----------------------------HH------II------------------------------------------------------------------III------------------II---HHHHII--------------------------------IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII---------------------I--------II-------------------------------------------------------------------------------------IIIHHI-----II---------------------------------------------------------------------IIII-----------------------II-------------------------------------------------------------------------IIIIIIIIII----IIIIIIIIIII------------------------------------------------------------------------------------------------IIIIIIIII-----------------------------------------------------------------------------------------IIIIIIIIIIIIIII---------------------------------------------------------------------III-----------IIIIIIIIIIIIIIIIIIIIIHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHIIIIIIIII------IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII", 98, 34, 0, 0, 30));
+  g.levels.push(new Level("IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII[]]][][[[][][][]][][][[[][]]]][]J]][][]J[]]][[]J[]]]][][J[]]][][][][][][[][[[[]]]][[]]]][][][[[[II[[][]][][]]][][]][][][]][][][]][J[[[][]J[[]][[]J[]][][]]J]]]][[[[][[][]][]]][[[[]]]][][]][][][][II0[[]]][[[]][][]II[][]][[]]]][[[[J[[[[[[J[[[[][]J]]]][[][J[[]]][[[]]][]]][[[][][[[][][][[]]][[[][IIIIII][][]]]]IIII][][]][]][][[[[]J][[[[[J[[]][[]J[[[[[[[[J[[[[[][][[[[]]][]]]][][][][[[[[[[[[[[[[IIIIIIIIIIIIIIIII]]]][][]][]][]]IIIIIIIIIIII==[[[J[[[]][[[J]]][[[[[[[[[[[]]][[][[]]]][[]]]][[[[[[[II[][=[][=[III]][]][][[][]]][][[[[][]J[]][][]]IIIIIIIIIIIIIIII[[[[[[]]]]]]]]]]]]]]]]][[[[[[[[[[[[[II[=][==][=]J]]]]]]]]]]][[[[[[[[[[[[]J]]]]][]]]]]]][[[]]][[[[[[[[[[[[[[[[]]]]]][[[[[[[[[[]]]]]]][[II[][]=[][]=J[]][][][[][[[[]][]]][]]]J]]][[][][]]]][[[]]]]][]]]]][]]]][]][][][][][]]]]][]]]]][[[[]II]=[]=][]]=J][][][][]]][[[[][][][][]J]][[[][]]]]]]]][][[[[[[[][[][][][]][[[][[][]][[]][[][JJJJJJJII=][]=]=[==J[[][][][[[[[]][][][][][]J[][][][][[[[[]]][[][[IIIIIIII[]][][]][][[[[[]][]JJJJJJJJJJJJII[][]=][[][J]]]][[][][][][][][][][][J]][][][[[[][][[[[]][][[[JJ[]]][[[][[[][][[[][[JJJJJJJJJJJJJJII[==[[]]=][J[[[[[]][]][][]]]][]]]]]]J[[[][[[]]][]]]]]][[[[][]JJ][][][][]]]][]]][]]JJJJJJJJJJJJJJJII[][]=[]=[[IIIIIII[]]][][][][][[[]][J][][][][[[]][[]][[][][[[JJ][][]]IIIIIIIIIIIIIIIIIIIIIIIIIIIIII]][]=[]]==J[[][J[][][][[[][][[][]IIIII[][][IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII[=][=][=[]J[][]J[][[[][][][][[[]][][][][][][][]]]]][IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII[[[]=][]=]J][][J]][[II[[[]]][][][][][][][]]]]][[[]][[[[]]]]]]]]][[[[[[[][[[[]][][][JJJJ[[]]][]]]II[]=]=[][[]J[][]J]]IIIIIIII[[[]][[[[]]][][][][[]][][]][][][]][]]][]][[[[]][][]]][]]]JJ[[]][[[]][]II=[][]=][][J]][]J[][][][][]]][][]][]]]]][[]][[[[][[[]]]]][][][][]]]][]][][[]][[]][]]]J[]][[][][][II0[[][]]===J[[[[J[[[[[[[[[[]]]]]]][][][][]]]]]][][]][][][[][[[]]][[][]]][][][]]]]]]]JJJJ[][][][]0IIIIIIIIIIIIIIIIIIIIIIIIII[][]]][[[]]]][]]][][]]]]][]]]][[][[][][][[]][[[IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII=======================IIIIIIIII=====================IIIIII=========II=======J===========================================================================JJ===========II=======JJ==============================IIIIII=======================================J===========II=======JJ==================================IIII=====================================J===========II=======JJ==================IIIIII==================================================JJ===========II=======JJ==========================================================================J============II=======JJ==========================================================================JJ===========II=======JJ==========================================================================JJ===========II=======JJ=========================================================================-JJJ==========II=======JJ==========================================================================JJJJ=========IIHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHIIHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII", 98, 34, 1, -300, -120));
+  g.levels.push(new Level("IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII---------------------------------------------------------------------------------II--------------------------------------II---------------------------------------------------------------------------------II--------------------------------------II0--------------------JJJJJJ------------------------------------------------------II--------------------------------------IIIIII---------------JJ------JJ----------------------------------------------------II--------------------------------------bII----------------JJ----------JJ------------------------------------------------------------------------------------------bII----------------JJ----------JJ----------------------------------------------III-----------------------------------------bII----------------------------JJ--------------------------------------IIIIIIII--------------------------------------------bII----------------------------JJ------------------------------------------------------------------------------------------bII--------------------------JJ--------------------------------------------------------------------------------------------bII------------------------JJ-------------------------------------IIII-----------------------------------------------------bII----------------------JJ-----------------------------------------II-----------------------------------------------------bII----------------------JJ---------------------------IIII----------II-----------------------------------------------------bII----------------------JJ-----------------------IIIIII------------II-----------------------------------------------------bII-----------------------------------------------------------------II-----------------------------------------------------bII----------------------JJ-----------------------------------------II-----------------------------------------------------bII----------------------JJ---------------IIIII---------------------II-----------------------------------------------------IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII", 123, 18, 2, -300, -120));
+  g.levels.push(new Level("IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII--------------------------------------------------------------------------II--------------------------------------------------------------------------II-------------------------------------------------------I-----------------0II------------------------------------II--------------------------------IIIIII--------------------------------------------------------------------------II--------------------------------------------------------------------------II-------------------------IIIIIII------------------------------------------II--------------------------------------------------------------------------II--------------------------------------------------------------------------II--------------------------------------------------------------------------II-----------------------------------IIII-----------------------------------II--------------------------------------II----------------------------------II--------------IIIIIIII----------------------------------------------------II-----------------------------------------IIIII-----II---------------------II--------------------------------------------------------------------------II------------------------------------JJ------------------------------------II----------------------------------IIJJII----------------------------------II-------------------------------IIIIIJJIIIII-------------------------------II----------------------------IIIIIIIIJJIIIIIIII----------------------------II---------IIIIIIII---------IIIIIIIIIIJJIIIIIIIIII--------IIIII-------------IIII----------------------IIIIIIIIIIIIJJIIIIIIIIIIII------------------------II----------------------IIIIIIIIIIIIIIJJIIIIIIIIIIIIIII-----------IIIIII----II--------------------JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ-------------------IIIIIIII------------JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ-----------------II----------------IIIIIIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJIIIIII---------------II--------------IIIIIIIIIIIIJJJJJJJJJJJJJJJJJJJJJJJIIIIIIIIIIII----III------II------------IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII-----------II---------IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII---------II-------IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII-------II-----IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII-----II----IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII----IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII", 76, 33, 3, 0, -120));
+//Sometime in the future I'm going to move the levels to a text file
+}
+
+function game()
+{
+  this.pBullets = new Array();
+  this.eBullets = new Array();
+  this.AIList = new Array();
+  this.tiles = new Array();
+  this.wallTiles = new Array();
+  this.fireTiles = new Array();
+  this.doorTiles = new Array();
+  this.hiveTiles = new Array();  
+  this.signTiles = new Array(); 
+  this.loop = true;
+  this.levelNumber = 1;
+  this.levels = new Array();
+}
+
+var gVar = new game();
+addLevels(gVar);
+loadLevel(1, P1, gVar);
+function pos(x, y)
+{
+  this.x = x;
+  this.y = y;
+}
+
+function getMousePos(canvas, evt) 
+{
+  var rect = canvas.getBoundingClientRect();
+  return new pos((evt.clientX - rect.left) / (rect.right - rect.left) * canvas.width, (evt.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height);
+}
+
+var interval = setInterval(gameLoop, 25);
+var mousePos;
+window.addEventListener('keyup', function(event) { Key.onKeyup(event); }, false);
+window.addEventListener('keydown', function(event) { Key.onKeydown(event); }, false);
+/**c.addEventListener('mousemove', function(event) {
+        mousePos = getMousePos(c, event);  }, false);
+window.addEventListener('mousedown', function(event) { shootBullet(mousePos, P1); }, false); **/
+
+
+
+
+
+function gameLoop()
+{	
+  if (gVar.loop)
+  {
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.fillStyle= "#222222";
+    ctx.fillRect(0, 0, c.width, c.height);
+	  drawLevel(ctx, gVar.tiles);
+	  updatePlayer(P1, gVar);
+	  updateAI(gVar);
+	  drawGUI(P1, ctx);
+  }
+}
+
+var particles = new Array();
+function Particle(x, y, size, decay, spd, dir, angle)
+{
+  this.x = x;
+  this.y = y;
+  this.size = size;
+  this.decay = decay;
+  this.spd = spd;
+}
+
+
+
+gVar.AIList.push(new AI(50, 200, 15, "#FF0000",
+function(t)
+{
+  return 2 * t;
+},
+function(t)
+{
+  return 100 * Math.sin(t/10);
+}));
+gVar.AIList.push(new AI(80, 100, 15, "#FF0000",
+function(t)
+{
+  return 3 * t;
+},
+function(t)
+{
+  return 50 * Math.sin(t/10);
+}));
+
+function updateAI(g)
+{
+  for (var i = 0; i < g.AIList.length; i++)
+  {
+    g.AIList[i].incrementPos();
+    drawSquare(ctx, g.AIList[i], g.AIList[i].color);
+  }
+}
+
+function touchingEnemy(enemies, p)
+{
+  for (var i = 0; i < enemies.length; i++)
+  {
+    if (detectCollision2(p, enemies[i]))
+      playerDamage(p, enemies[i].damage, "enemy")
+  }
+}
+
+function enemyDamage(g)
+{
+  for (var i = 0; i < g.AIList.length; i++)
+  {
+    for (var j = 0; j < g.pBullets.length; j++)
+    {
+      if (detectCollision2(g.pBullets[j], g.AIList[i]))
+        g.AIList[i].hp -= g.pBullets[j].damage; 
+    }
+    if (g.AIList[i].hp < 1)
+    {
+        g.AIList.splice(i, 1);
+        i--;
+    }
+  }
+}
+
+function AI(xPos, yPos, drawSize, drawColor, tFuncX, tFuncY)
+{
+  this.color = drawColor;
+  this.hp = 10;
+  this.startX = xPos;
+  this.startY = yPos;
+  this.x = xPos;
+  this.y = yPos;
+  this.shiftX = tFuncX;
+  this.shiftY = tFuncY;
+  this.size = drawSize;
+  this.t = 0;
+  this.damage = 10;
+  this.incrementPos = function()
+  {
+    this.t++;
+    this.x = this.startX + this.shiftX(this.t); // this is the kill tigger code
+    this.y = this.startY + this.shiftY(this.t); 
+  };
+}
+  
+</script>
+</body>
+</html>

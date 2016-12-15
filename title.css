@@ -1,0 +1,84 @@
+@font-face {
+  font-family: 'trench';
+  src: 
+    url('resources/trench100.otf')
+    format('opentype');
+  src: 
+    url('resources/trench100.ttf')
+    format('truetype');
+}
+
+a {
+  font-size: 15px;
+  text-decoration: none; 
+}
+a:link {
+    color: #ECECEA;
+}
+
+a:visited {
+    color: #ECECEA;
+}
+
+a:hover {
+    color: #CED5C0;
+}
+
+a:active {
+    color: #CED5C0;
+}
+
+.title {
+  position: absolute;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  top: 0;
+  left: 0;
+  text-decoration: none;
+  text-align: center;
+  background-color: #558C89;
+  background-image: url(resources/pixel.png);
+  background-position: 75% 30%;
+  background-repeat: no-repeat;
+  font-family: 'trench';
+}
+
+.title2 {
+  margin: 1% 1% 1% 1%;
+  border: 3px solid #74AFAD;
+  left: -10;
+}
+
+.titlename {
+  font-size: 64px;
+  position: relative;
+  color: #ECECEA;
+}
+
+.titlesub {
+  font-size: 32px;
+  position: relative;
+  color: #ECECEA;
+}
+
+.content {
+  padding-bottom:100px;  
+}
+
+.main {
+  position: relative;
+  top: 300px;
+  background-color: #ECECEA;
+}
+
+.footer {
+  position: absolute;
+  width:100%;
+	height:100px;
+  left: 0;
+  bottom: 0;
+  background-color: #CED5C0;
+  text-align: center;
+}
+

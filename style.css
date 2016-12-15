@@ -1,0 +1,68 @@
+@font-face {
+  font-family: 'trench';
+  src: 
+    url('resources/trench100.otf')
+    format('opentype');
+  src: 
+    url('resources/trench100.ttf')
+    format('truetype');
+}
+
+body {
+  background-color: #ECECEA;
+  color: black;
+  text-align: center;
+  font-family: Verdana;
+}
+
+a {
+  font-size: 15px;
+  text-decoration: none; 
+}
+
+
+.listtitle {
+  font-family: 'trench';
+  font-size: 24px;
+  background-color: #D9853B;
+  width: 35%;
+  border-radius: 2px;
+  margin: auto;
+  text-align: center;
+  display: inline-block;
+  padding: 6;
+}
+
+.list {
+  background-color: #74AFAD; 
+  width: 40%;
+  margin:auto;
+  color: #FFFFFF;
+  padding: 15 15 15 15;
+}
+
+.patch {
+  margin: auto;
+  padding: 15px;
+
+  background-color: #74AFAD; 
+  width: 40%;
+  color: #FFFFFF;
+}
+
+/* helo jame park my name is luc wetehrbee and I am excelent at quizbowl */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
