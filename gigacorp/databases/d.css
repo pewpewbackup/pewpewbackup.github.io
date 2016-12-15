@@ -1,0 +1,46 @@
+body {
+  background-color: #1D1D1D;
+  color: #FFFFFF;
+  padding-left: 2%;
+  font-family: Verdana;
+}
+
+pre {
+  font-size: 20px;  
+  width: 100%;
+}
+
+#red {
+  color: #FF0000;  
+}
+
+#puzzle {
+  width: 55%;  
+}
+
+#sideBar
+{
+  width: 40%;
+  left:60%;
+  top: 0%;
+  background-color: #B2B2B2;
+  height:100vh;
+  position:fixed;
+}
+
+.clickable
+{
+  cursor: pointer;
+  cursor: hand; 
+}
+
+.imgContainer
+{
+  width:16vw;
+}
+
+.mrinalsPuzzle
+{
+  height: auto;
+  max-width: 100%;
+}

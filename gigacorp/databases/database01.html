@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Database 1</title> 
+    <link href="d.css" rel="stylesheet" type="text/css" media="all">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+    <script src="sjcl.js"></script>
+  </head>
+  <body style="padding-left:2%;">
+  
+  <h1>Database 1: KIWI PEACH ORANGE</h1>
+    
+    
+    <iframe src="d1p1.html" class="sideBar" id="sideBar">ERROR</iframe>
+    
+    <div id="puzzle">
+Once you have found the password, enter it here: <input type="text" id="answerField"/>
+<button id="submit">Submit</button>
+   
+<h3>Document 002-1</h3>
+
+<h4>ENCRYPTED WITH KEY-4sY9 (“FRUITBAT”)</h4>
+
+<p>FROM: [DATA CLEARED]<br/>
+SUBJECT: PASSWORD<br/><br/>
+
+
+[KIWI ORANGE APPLE. ORANGE APPLE ORANGE. PEACH APPLE ORANGE. APPLE KIWI ORANGE. PEAR PEAR APPLE. KIWI ORANGE PEACH. APPLE PEAR ORANGE. ORANGE APPLE PEAR.] </p><br/>
+
+
+<h3>Document 002-2</h3>
+<p>FROM: Dr. Corry<br/>
+SUBJECT: Weekly Report<br/><br/>
+
+Protobot is developing quicker than we anticipated, but it still has quite the list of limitations. Its communication algorithm, in particular, needs some tweaking: lately all it does is spew out random chains of words. Even with all the information we’re feeding it, Protobot can’t get a hold of the linguistic complexity that is English.<br/>
+Meanwhile administration has cut our funding yet again, citing “a lack of progress.” Ha. They wouldn’t know progress if it hit them in the face. Luckily Dr. Henry has been kind enough to offer assistance, so all hope is not lost yet.
+</p><br/>
+
+
+<h3>Document 002-3</h3>
+
+<p>FROM: Dr. Henry<br/>
+SUBJECT: Update<br/><br/>
+
+Hey, Corry. It’s Henry. Just wanted to let you know that the boys are implementing some new encryption software for high-security files. It’s called “Fruitbat” or something like that, but apparently it’s state-of-the-art-stuff. Guess administration’s getting a little jumpy, what with all the talk about terrorist threats lately. I’ve attached a file with some basic info on how it works, so read through it when you can.<br/>
+I know you’ve felt a bit down lately after that reprimand from administration, but keep your chin up. I think I’ve found a solution to Proto’s gibberish. I’ll let you know when I’m available.</p>
+
+<p id="red">ATTACHMENT CORRUPTED</p> <br/>
+
+
+<h3>Document 002-4</h3>
+
+
+<p>FROM: Dr. Henry<br/>
+SUBJECT: I'm sorry<br/><br/>
+
+Corry. I’ve... got some bad news. Administration is pretty decided on this, so not much we can do, but I can’t come around to your lab anymore. Had a whole meeting and all today, pretty official stuff. They called your project a few things you probably don’t want to hear. Protobot isn’t being shut down yet, but it’s only a matter of time. Your job isn’t safe either, so I’d suggest behaving when they come for you.<br/>
+I’m sorry. I thought we could do more, but I guess things didn’t turn out the way we wanted to.
+</p><br/>
+
+<h3>Document 002-5</h3>
+
+
+<h4>ENCRYPTED WITH KEY-4sY9 (“FRUITBAT”)</h4>
+<h4 id="red">WARNING: CORRUPTION DETECTED DURING DECRYPTION. LOADING PARTIALLY DECRYPTED MESSAGE BACKUP.</h4>
+
+<p>FROM: MANGO<br/>
+SUBJECT: APPLE GRAPE<br/><br/>
+
+I’ve had enough of this [ORANGE]. [APPLE] we a research [ORANGE], [BANANA] just another bureaucracy laden in [PEACH] [ORANGE]? Security can deal with me as they like, [BANANA] I’m going in there [BANANA] dealing with the situation myself.  [APPLE] we [PEAR] [APPLE] ourselves to [ORANGE] like this? [KIWI] way I see it, [KIWI] few [PEACH] [ORANGE] have no right to [APPLE] our research like this. Funnily enough, no one seems to agree with me; they’re probably [PEAR] brainwashed by the higher-ups.
+You were a good friend, Henry. If you ever change your mind, feel free to join me. 
+</p> <br/>
+
+<h3>Document 002-6</h3>
+<p>FROM: GigaCorp Administration<br/>
+SUBJECT: NOTICE<br/><br/>
+
+As of today, Dr. Wolt is to take over the lab of Dr. Corry. All further research into Proposal 032-J (“Protobot”) is to be ceased immediately. Failure to follow these instructions is grounds for demotion and/or termination.
+</p><br/>
+
+<h3>Document 002-7</h3>
+<p>FROM: [DATA CLEARED]<br/>
+SUBJECT: haven't died yet<br/><br/>
+
+i'll get revenge.
+</p><br/>
+
+
+</div>
+    
+<script>
+
+
+//let CIPHER = new sjcl.hash.sha256();
+let CORRECT_ANSWER = [1548405558, -1129443857, -489868885, -687722367, 291708885, -1155257247, -381989712, 963036104];
+
+$("#submit").click(function() {
+  let THEIR_ANSWER = sjcl.hash.sha256.hash($("#answerField").val().toLowerCase().trim());
+  var match = true;
+  for (var i = 0; i < 8 && match; i++)
+      if (CORRECT_ANSWER[i] != THEIR_ANSWER[i])
+         match = false;
+  if (match)
+  {
+      alert("you did it!");
+      //Perform victory conditions.  
+    }
+});
+
+
+
+
+
+</script>
+  </body>
+</html>
